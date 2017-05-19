@@ -3,40 +3,28 @@
 
 #include <stdint.h>
 
-#define SD_TIMEOUT 0xFFF
+void hal_init();
 
-void init();
+void hal_stream_input_enable();
+void hal_stream_input_disable();
+void hal_stream_output_enable();
+void hal_stream_output_disable();
 
-void led_read_off();
-void led_read_on();
-void led_write_off();
-void led_write_on();
-void led_spoof_off();
-void led_spoof_on();
+// Calculate the number of bytes behind the DMA counter the read pointer currently is.
+// Assume no overflows.
+int hal_stream_input_available();
 
-int button();
+// Read n samples from rx buffer into samples
+void hal_stream_input(uint8_t* samples, int n);
 
-void coil_drive();
-void coil_float();
-void coil_tune();
-void coil_detune();
+// Returns the maximum number of samples that can be written to the tx buffer.
+// Assumes no overflows.
+int hal_stream_output_space();
 
-void stream_read_enable();
-void stream_read_disable();
-void stream_write_enable();
-void stream_write_disable();
-int stream_read_available();
-void stream_read(int16_t* hws, int n);
-int stream_write_space();
-void stream_write(int8_t* bytes, int n);
-void stream_write_byte(int8_t byte);
+// Write n bytes into the tx buffer
+void hal_stream_output(uint8_t *samples, int n);
 
-void set_latency(int16_t l);
+extern volatile int hal_stream_input_enabled;
+extern volatile int hal_stream_output_enabled;
 
-extern volatile int stream_read_enabled;
-extern volatile int stream_write_enabled;
-
-extern volatile int led_timer;
-extern volatile int button_timer;
- 
 #endif

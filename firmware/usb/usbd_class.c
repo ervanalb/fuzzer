@@ -12,8 +12,8 @@
 static int need_zlp = 0;
 static int packet_sent = 0;
 static int rx_open = 0;
-static int16_t tx_buf[MAX_PACKET_SIZE / sizeof(int16_t)];
-static int8_t rx_buf[MAX_PACKET_SIZE / sizeof(int8_t)];
+static uint8_t tx_buf[MAX_PACKET_SIZE];
+static uint8_t rx_buf[MAX_PACKET_SIZE];
 static uint8_t bRequest;
 static uint8_t initialized = 0;
 
@@ -48,68 +48,6 @@ static uint8_t setup_cb(void* pdev, USB_SETUP_REQ* req) {
     bRequest = req->bRequest;
 
     switch(req->bRequest) {
-        case REQUEST_LED_READ:
-            transition(STATE_REMOTE);
-            if(req->wValue) {
-                led_read_on();
-            } else {
-                led_read_off();
-            }
-            return USBD_OK;
-        case REQUEST_LED_WRITE:
-            transition(STATE_REMOTE);
-            if(req->wValue) {
-                led_write_on();
-            } else {
-                led_write_off();
-            }
-            return USBD_OK;
-        case REQUEST_LED_SPOOF:
-            transition(STATE_REMOTE);
-            if(req->wValue) {
-                led_spoof_on();
-            } else {
-                led_spoof_off();
-            }
-            return USBD_OK;
-        case REQUEST_COIL_DRIVE:
-            transition(STATE_REMOTE);
-            if(req->wValue) {
-                coil_tune();
-                coil_drive();
-            } else {
-                coil_float();
-            }
-            return USBD_OK;
-        case REQUEST_COIL_TUNE:
-            transition(STATE_REMOTE);
-            if(req->wValue) {
-                coil_tune();
-            } else {
-                coil_float();
-                coil_detune();
-            }
-            return USBD_OK;
-        case REQUEST_STREAM_READ:
-            transition(STATE_REMOTE);
-            if(req->wValue) {
-                stream_read_enable();
-            } else {
-                stream_read_disable();
-            }
-            return USBD_OK;
-        case REQUEST_STREAM_WRITE:
-            transition(STATE_REMOTE);
-            if(req->wValue) {
-                stream_write_enable();
-            } else {
-                stream_write_disable();
-            }
-            return USBD_OK;
-        case REQUEST_LATENCY:
-            transition(STATE_REMOTE);
-            set_latency(req->wValue);
-            return USBD_OK;
         default:
             return USBD_FAIL;
     }
@@ -167,17 +105,17 @@ static uint8_t* config_cb(uint8_t speed, uint16_t* length) {
 static void try_tx(void* pdev) {
       if(packet_sent) return;
 
-      int samples_available = stream_read_available();
+      int samples_available = hal_stream_input_available();
 
-      if(samples_available >= MAX_PACKET_SIZE / sizeof(int16_t)) {
-            stream_read(tx_buf, MAX_PACKET_SIZE / sizeof(int16_t));
+      if(samples_available >= MAX_PACKET_SIZE) {
+            hal_stream_input(tx_buf, MAX_PACKET_SIZE);
             need_zlp = 1;
             DCD_EP_Tx(pdev, IN_EP, (uint8_t*)tx_buf, MAX_PACKET_SIZE);
             packet_sent = 1;
-      } else if(stream_read_enabled == 0 && (samples_available > 0 || need_zlp)) {
-          stream_read(tx_buf, samples_available);
+      } else if(hal_stream_input_enabled == 0 && (samples_available > 0 || need_zlp)) {
+          hal_stream_input(tx_buf, samples_available);
           need_zlp = 0;
-          DCD_EP_Tx(pdev, IN_EP, (uint8_t*)tx_buf, samples_available * sizeof(int16_t));
+          DCD_EP_Tx(pdev, IN_EP, (uint8_t*)tx_buf, samples_available);
           packet_sent = 1;
       }
 }
@@ -185,10 +123,10 @@ static void try_tx(void* pdev) {
 static void try_rx(void *pdev) {
     if(rx_open) return;
 
-    uint16_t free_space = stream_write_space();
+    uint16_t free_space = hal_stream_output_space();
 
     // If 64 bytes of space are free in TX buffer, open the EP
-    if(free_space >= MAX_PACKET_SIZE / sizeof(uint8_t)) {
+    if(free_space >= MAX_PACKET_SIZE) {
         DCD_EP_PrepareRx(pdev, OUT_EP, (uint8_t*)rx_buf, MAX_PACKET_SIZE);
         rx_open = 1;
     }
@@ -205,7 +143,7 @@ static uint8_t tx_cb(void *pdev, uint8_t epnum) {
 static uint8_t rx_cb(void *pdev, uint8_t epnum) {
     // Take the newly received data and put it in the write stream
     uint16_t length = ((USB_CORE_HANDLE*)pdev)->dev.out_ep[epnum].xfer_count;
-    stream_write(rx_buf, length);
+    hal_stream_output(rx_buf, length);
     rx_open = 0;
     try_rx(pdev);
     return USBD_OK;

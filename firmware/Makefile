@@ -11,7 +11,7 @@ C_SRC += $(wildcard lib/usb-device/src/*.c)
 
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC)) startup.o
 
-PROJECT = rfid
+PROJECT = fuzzer
 
 LIBRARIES = 
 
