@@ -48,6 +48,20 @@ static uint8_t setup_cb(void* pdev, USB_SETUP_REQ* req) {
     bRequest = req->bRequest;
 
     switch(req->bRequest) {
+        case REQUEST_STREAM_INPUT:
+            if(req->wValue) {
+                hal_stream_input_enable();
+            } else {
+                hal_stream_input_disable();
+            }
+            return USBD_OK;
+        case REQUEST_STREAM_OUTPUT:
+            if(req->wValue) {
+                hal_stream_output_enable();
+            } else {
+                hal_stream_output_disable();
+            }
+            return USBD_OK;
         default:
             return USBD_FAIL;
     }

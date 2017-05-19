@@ -31,12 +31,12 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 #define USBD_VID                     0xFFFF
-#define USBD_PID                     0x2951
+#define USBD_PID                     0x5878
 
 #define USBD_LANGID_STRING            0x409
 #define USBD_MANUFACTURER_STRING      "Eric Van Albert"
 
-#define USBD_PRODUCT_FS_STRING        "RFID Tool"
+#define USBD_PRODUCT_FS_STRING        "Hardware Fuzzer"
 
 #define USBD_CONFIGURATION_FS_STRING  "Default"
 #define USBD_INTERFACE_FS_STRING      "Default"
