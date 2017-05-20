@@ -15,7 +15,11 @@ static int rx_open = 0;
 static uint8_t tx_buf[MAX_PACKET_SIZE];
 static uint8_t rx_buf[MAX_PACKET_SIZE];
 static uint8_t bRequest;
+static uint8_t wValue;
 static uint8_t initialized = 0;
+static union {
+    uint8_t config;
+} scratchpad;
 
 static uint8_t init_cb(void* pdev, uint8_t cfgidx) {
     DCD_PMA_Config(pdev, IN_EP, USB_SNG_BUF, BULK_IN_TX_ADDRESS);
@@ -46,6 +50,7 @@ static uint8_t setup_cb(void* pdev, USB_SETUP_REQ* req) {
     }
 
     bRequest = req->bRequest;
+    wValue = req->wValue;
 
     switch(req->bRequest) {
         case REQUEST_STREAM_INPUT:
@@ -62,13 +67,24 @@ static uint8_t setup_cb(void* pdev, USB_SETUP_REQ* req) {
                 hal_stream_output_disable();
             }
             return USBD_OK;
+        case REQUEST_CONFIGURE_PIN:
+            if(req->wValue >= 8) return USBD_FAIL;
+            if(req->wLength != 1) return USBD_FAIL;
+            USBD_CtlPrepareRx(pdev, &scratchpad.config, req->wLength);
+            return USBD_OK;
         default:
             return USBD_FAIL;
     }
 }
 
 static uint8_t ctl_rx_cb(void *pdev) {
-    return USBD_FAIL;
+    switch(bRequest) {
+        case REQUEST_CONFIGURE_PIN:
+            hal_configure_pin(wValue, scratchpad.config);
+            return USBD_OK;
+        default:
+            return USBD_FAIL;
+    }
 }
 
 const uint8_t config_descriptor[] = {

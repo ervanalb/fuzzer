@@ -8,13 +8,13 @@
 
 #define INPUT_BUFFER_SIZE 256
 #define OUTPUT_BUFFER_SIZE 256
-#define PERIOD 384
+#define PERIOD 96
 
 // Buffer where samples input from the pins are put
-static volatile int8_t input_buffer[INPUT_BUFFER_SIZE];
+static volatile uint8_t input_buffer[INPUT_BUFFER_SIZE] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
 // Buffer where samples written to the pins are put
-static volatile int8_t output_buffer[OUTPUT_BUFFER_SIZE];
+static volatile uint8_t output_buffer[OUTPUT_BUFFER_SIZE];
 
 // Pointer to buffer where data is being read (lags DMA counter)
 static volatile int input_read_ptr = 0;
@@ -42,7 +42,7 @@ void hal_init() {
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_All;
+    GPIO_InitStruct.GPIO_Pin = 0x00FF;
     GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     // Timers
@@ -93,8 +93,8 @@ void hal_init() {
     DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)output_buffer;
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
     DMA_InitStructure.DMA_Priority = DMA_Priority_Low;
-    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)1 + (uint32_t)&(GPIOB->ODR);
-    DMA_Init(DMA1_Channel1, &DMA_InitStructure);
+    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(GPIOB->ODR);
+    DMA_Init(DMA1_Channel3, &DMA_InitStructure);
     DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_HT, ENABLE);
 
     NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel2_3_IRQn;
@@ -168,6 +168,32 @@ void hal_stream_output(uint8_t *samples, int n) {
     }
 }
 
+// Reconfigure pin
+void hal_configure_pin(uint8_t pin, uint8_t config) {
+    if(config & HAL_CONF_OUTPUT) {
+        GPIOB->MODER |= 1 << (2 * pin);
+    } else {
+        GPIOB->MODER &= ~(1 << (2 * pin));
+    }
+    if(config & HAL_CONF_PU) {
+        uint32_t pupdr = GPIOB->PUPDR;
+        pupdr |= 1 << (2 * pin);
+        pupdr &= ~(2 << (2 * pin));
+        GPIOB->PUPDR = pupdr;
+    } else if(config & HAL_CONF_PD) {
+        uint32_t pupdr = GPIOB->PUPDR;
+        pupdr |= ~(2 << (2 * pin));
+        pupdr &= ~(1 << (2 * pin));
+        GPIOB->PUPDR = pupdr;
+    } else {
+        GPIOB->PUPDR &= ~(3 << (2 * pin));
+    }
+    if(config & HAL_CONF_OD) {
+        GPIOB->OTYPER |= 1 << pin;
+    } else {
+        GPIOB->OTYPER &= ~(1 << pin);
+    }
+}
 
 // INTERRUPTS
 

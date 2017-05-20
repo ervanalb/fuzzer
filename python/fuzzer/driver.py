@@ -11,6 +11,14 @@ class Fuzzer:
 
     REQUEST_STREAM_INPUT   = 0x20
     REQUEST_STREAM_OUTPUT  = 0x21
+    REQUEST_CONFIGURE_PIN  = 0x22
+
+    CONF_OUTPUT = 1
+    CONF_PU     = 2
+    CONF_PD     = 4
+    CONF_OD     = 8
+
+    N_PINS = 8
 
     def __init__(self):
         self.dev = usb.core.find(idVendor=self.VID, idProduct=self.PID)
@@ -34,6 +42,13 @@ class Fuzzer:
         data = struct.pack("<{}B".format(len(data)), *list(data))
         result = self.dev.write(0x02, data, timeout=int(len(data) / 125 * 1.2 + 1000))
         assert result == len(data)
+
+    def configure_pin(self, pin, config):
+        assert isinstance(pin, int), ValueError("pin must be integer")
+        assert pin >= 0, ValueError("pin must be positive")
+        assert pin < self.N_PINS, ValueError("pin must be less than {}".format(self.N_PINS))
+        data = struct.pack("<B", config)
+        self.dev.ctrl_transfer(self.CONTROL_OUT, self.REQUEST_CONFIGURE_PIN, pin, 0, data)
 
     # Higher-level functions
 

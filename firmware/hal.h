@@ -3,7 +3,14 @@
 
 #include <stdint.h>
 
+#define HAL_CONF_OUTPUT 1
+#define HAL_CONF_PU 2
+#define HAL_CONF_PD 4
+#define HAL_CONF_OD 8
+
 void hal_init();
+
+void hal_configure_pin(uint8_t pin, uint8_t config);
 
 void hal_stream_input_enable();
 void hal_stream_input_disable();
