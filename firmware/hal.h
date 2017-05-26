@@ -12,7 +12,7 @@ void hal_init();
 
 void hal_configure_pin(uint8_t pin, uint8_t config);
 
-void hal_stream_enable(uint8_t *input_buffer, uint8_t *output_buffer, uint16_t buffer_size);
+void hal_stream_enable();
 void hal_stream_disable();
 
 // Calculate the number of bytes behind the DMA counter the read pointer currently is.

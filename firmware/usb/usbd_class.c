@@ -6,8 +6,11 @@
 #include <string.h>
 #include "hal.h"
 #include "main.h"
+#include "program.h"
 
 #define MAX_PACKET_SIZE 64 
+
+#define USB_REQ_IN 0x80
 
 static int need_zlp = 0;
 static int packet_sent = 0;
@@ -17,9 +20,6 @@ static uint8_t rx_buf[MAX_PACKET_SIZE];
 static uint8_t bRequest;
 static uint8_t wValue;
 static uint8_t initialized = 0;
-static union {
-    uint8_t config;
-} scratchpad;
 
 static uint8_t init_cb(void* pdev, uint8_t cfgidx) {
     DCD_PMA_Config(pdev, IN_EP, USB_SNG_BUF, BULK_IN_TX_ADDRESS);
@@ -53,11 +53,25 @@ static uint8_t setup_cb(void* pdev, USB_SETUP_REQ* req) {
     wValue = req->wValue;
 
     switch(req->bRequest) {
-        //case REQUEST_CONFIGURE_PIN:
-        //    if(req->wValue >= 8) return USBD_FAIL;
-        //    if(req->wLength != 1) return USBD_FAIL;
-        //    USBD_CtlPrepareRx(pdev, &scratchpad.config, req->wLength);
-        //    return USBD_OK;
+        case REQUEST_STREAM:
+            if(req->bmRequest & USB_REQ_IN) {
+                return USBD_FAIL;
+            }
+            if(req->wValue) {
+                hal_stream_enable();
+            } else {
+                hal_stream_disable();
+            }
+            return USBD_OK;
+        case REQUEST_LOAD_PROGRAM:
+            if(req->bmRequest & USB_REQ_IN) {
+                return USBD_FAIL;
+            }
+            if((&_suser_program) + req->wLength > (&_euser_program)) {
+                return USBD_FAIL;
+            }
+            USBD_CtlPrepareRx(pdev, &_suser_program, req->wLength);
+            return USBD_OK;
         default:
             return USBD_FAIL;
     }
@@ -65,9 +79,8 @@ static uint8_t setup_cb(void* pdev, USB_SETUP_REQ* req) {
 
 static uint8_t ctl_rx_cb(void *pdev) {
     switch(bRequest) {
-        //case REQUEST_CONFIGURE_PIN:
-        //    hal_configure_pin(wValue, scratchpad.config);
-        //    return USBD_OK;
+        case REQUEST_LOAD_PROGRAM:
+            return USBD_OK;
         default:
             return USBD_FAIL;
     }

@@ -9,7 +9,6 @@
 
 #define INPUT_BUFFER_SIZE 256
 #define OUTPUT_BUFFER_SIZE 256
-#define PERIOD 96
 
 // Whether we are streaming
 volatile int hal_stream_enabled = 0;
@@ -37,7 +36,7 @@ void hal_init() {
     // Timers
     TIM_TimeBaseInitStruct.TIM_Prescaler = 0;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInitStruct.TIM_Period = PERIOD - 1;
+    TIM_TimeBaseInitStruct.TIM_Period = 0;
     TIM_TimeBaseInitStruct.TIM_ClockDivision = 0;
     TIM_TimeBaseInitStruct.TIM_RepetitionCounter = 0;
     TIM_TimeBaseInit(TIM16, &TIM_TimeBaseInitStruct);
@@ -98,28 +97,32 @@ void hal_init() {
     hal_stream_disable();
 }
 
-void hal_stream_enable(uint8_t *input_buffer, uint8_t *output_buffer, uint16_t buffer_size) {
-    if(input_buffer) {
-        if(output_buffer) {
+void hal_stream_enable() {
+    if(program->input_buffer) {
+        if(program->output_buffer) {
             DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_HT, ENABLE);
         } else {
             DMA_ITConfig(DMA1_Channel1, DMA_IT_TC | DMA_IT_HT, ENABLE);
         }
 
+        DMA1_Channel1->CMAR = (uint32_t)program->input_buffer;
         DMA_Cmd(DMA1_Channel1, DISABLE);
-        DMA_SetCurrDataCounter(DMA1_Channel1, buffer_size);
+        DMA_SetCurrDataCounter(DMA1_Channel1, program->buffer_size);
         DMA_Cmd(DMA1_Channel1, ENABLE);
     }
 
-    if(output_buffer) {
+    if(program->output_buffer) {
+        DMA1_Channel3->CMAR = (uint32_t)program->output_buffer;
         DMA_Cmd(DMA1_Channel3, DISABLE);
-        DMA_SetCurrDataCounter(DMA1_Channel1, buffer_size);
+        DMA_SetCurrDataCounter(DMA1_Channel1, program->buffer_size);
         DMA_Cmd(DMA1_Channel3, ENABLE);
     }
 
     hal_stream_enabled = 1;
     hal_stream_overrun = 0;
 
+    TIM16->ARR = (SystemCoreClock / program->sample_rate) - 1;
+    TIM17->ARR = TIM16->ARR;
     TIM16->CNT = 0;
     TIM17->CNT = 0;
     TIM_Cmd(TIM16, ENABLE);
@@ -134,7 +137,7 @@ void hal_stream_disable() {
 
     DMA_Cmd(DMA1_Channel1, DISABLE);
     DMA_Cmd(DMA1_Channel3, DISABLE);
-    DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_HT, ENABLE);
+    DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_HT, DISABLE);
     DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_HT, DISABLE);
     hal_stream_enabled = 0;
 }
