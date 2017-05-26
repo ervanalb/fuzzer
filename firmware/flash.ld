@@ -2,10 +2,14 @@ ENTRY(Reset_Handler)
 
 MEMORY
 {
-  FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 32K
-  RAM (rwx)   : ORIGIN = 0x20000000, LENGTH = 6K
+  FLASH (rx)           : ORIGIN = 0x08000000, LENGTH = 32K
+  USER_PROGRAM (rwx)   : ORIGIN = 0x20000000, LENGTH = 4K
+  RAM (rwx)            : ORIGIN = 0x20001000, LENGTH = 2K
 }
 _estack = ORIGIN(RAM) + LENGTH(RAM);
+
+_suser_program = ORIGIN(USER_PROGRAM);
+_euser_program = ORIGIN(USER_PROGRAM) + LENGTH(USER_PROGRAM);
 
 SECTIONS {
   /* Interrupt vector table at the beginning of flash */

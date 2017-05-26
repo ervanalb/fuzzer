@@ -53,25 +53,11 @@ static uint8_t setup_cb(void* pdev, USB_SETUP_REQ* req) {
     wValue = req->wValue;
 
     switch(req->bRequest) {
-        case REQUEST_STREAM_INPUT:
-            if(req->wValue) {
-                hal_stream_input_enable();
-            } else {
-                hal_stream_input_disable();
-            }
-            return USBD_OK;
-        case REQUEST_STREAM_OUTPUT:
-            if(req->wValue) {
-                hal_stream_output_enable();
-            } else {
-                hal_stream_output_disable();
-            }
-            return USBD_OK;
-        case REQUEST_CONFIGURE_PIN:
-            if(req->wValue >= 8) return USBD_FAIL;
-            if(req->wLength != 1) return USBD_FAIL;
-            USBD_CtlPrepareRx(pdev, &scratchpad.config, req->wLength);
-            return USBD_OK;
+        //case REQUEST_CONFIGURE_PIN:
+        //    if(req->wValue >= 8) return USBD_FAIL;
+        //    if(req->wLength != 1) return USBD_FAIL;
+        //    USBD_CtlPrepareRx(pdev, &scratchpad.config, req->wLength);
+        //    return USBD_OK;
         default:
             return USBD_FAIL;
     }
@@ -79,9 +65,9 @@ static uint8_t setup_cb(void* pdev, USB_SETUP_REQ* req) {
 
 static uint8_t ctl_rx_cb(void *pdev) {
     switch(bRequest) {
-        case REQUEST_CONFIGURE_PIN:
-            hal_configure_pin(wValue, scratchpad.config);
-            return USBD_OK;
+        //case REQUEST_CONFIGURE_PIN:
+        //    hal_configure_pin(wValue, scratchpad.config);
+        //    return USBD_OK;
         default:
             return USBD_FAIL;
     }
@@ -133,9 +119,10 @@ static uint8_t* config_cb(uint8_t speed, uint16_t* length) {
 }
 
 static void try_tx(void* pdev) {
+/*
       if(packet_sent) return;
 
-      int samples_available = hal_stream_input_available();
+      int samples_available = hal_usb_available();
 
       if(samples_available >= MAX_PACKET_SIZE) {
             hal_stream_input(tx_buf, MAX_PACKET_SIZE);
@@ -148,9 +135,11 @@ static void try_tx(void* pdev) {
           DCD_EP_Tx(pdev, IN_EP, (uint8_t*)tx_buf, samples_available);
           packet_sent = 1;
       }
+*/
 }
 
 static void try_rx(void *pdev) {
+/*
     if(rx_open) return;
 
     uint16_t free_space = hal_stream_output_space();
@@ -160,6 +149,7 @@ static void try_rx(void *pdev) {
         DCD_EP_PrepareRx(pdev, OUT_EP, (uint8_t*)rx_buf, MAX_PACKET_SIZE);
         rx_open = 1;
     }
+*/
 }
 
 static uint8_t tx_cb(void *pdev, uint8_t epnum) {
@@ -171,11 +161,13 @@ static uint8_t tx_cb(void *pdev, uint8_t epnum) {
 }
 
 static uint8_t rx_cb(void *pdev, uint8_t epnum) {
+/*
     // Take the newly received data and put it in the write stream
     uint16_t length = ((USB_CORE_HANDLE*)pdev)->dev.out_ep[epnum].xfer_count;
     hal_stream_output(rx_buf, length);
     rx_open = 0;
     try_rx(pdev);
+*/
     return USBD_OK;
 }
 
