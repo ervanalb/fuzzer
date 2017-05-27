@@ -7,9 +7,6 @@
 #include "program.h"
 #include <string.h>
 
-#define INPUT_BUFFER_SIZE 256
-#define OUTPUT_BUFFER_SIZE 256
-
 // Whether we are streaming
 volatile int hal_stream_enabled = 0;
 volatile int hal_stream_overrun = 0;
@@ -59,7 +56,7 @@ void hal_init() {
     DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
     DMA_InitStructure.DMA_MemoryBaseAddr = 0;
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-    DMA_InitStructure.DMA_Priority = DMA_Priority_Low;
+    DMA_InitStructure.DMA_Priority = DMA_Priority_High;
     DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(GPIOB->IDR);
     DMA_Init(DMA1_Channel1, &DMA_InitStructure);
     DMA_ITConfig(DMA1_Channel1, DMA_IT_TC | DMA_IT_HT, ENABLE);
@@ -80,7 +77,7 @@ void hal_init() {
     DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
     DMA_InitStructure.DMA_MemoryBaseAddr = 0;
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-    DMA_InitStructure.DMA_Priority = DMA_Priority_Low;
+    DMA_InitStructure.DMA_Priority = DMA_Priority_High;
     DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(GPIOB->ODR);
     DMA_Init(DMA1_Channel3, &DMA_InitStructure);
     DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_HT, ENABLE);
@@ -98,6 +95,8 @@ void hal_init() {
 }
 
 void hal_stream_enable() {
+    program->init();
+
     if(program->input_buffer) {
         if(program->output_buffer) {
             DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_HT, ENABLE);
@@ -109,12 +108,14 @@ void hal_stream_enable() {
         DMA_Cmd(DMA1_Channel1, DISABLE);
         DMA_SetCurrDataCounter(DMA1_Channel1, program->buffer_size);
         DMA_Cmd(DMA1_Channel1, ENABLE);
+    } else {
+        DMA_ITConfig(DMA1_Channel3, DMA_IT_TC | DMA_IT_HT, ENABLE);
     }
 
     if(program->output_buffer) {
         DMA1_Channel3->CMAR = (uint32_t)program->output_buffer;
         DMA_Cmd(DMA1_Channel3, DISABLE);
-        DMA_SetCurrDataCounter(DMA1_Channel1, program->buffer_size);
+        DMA_SetCurrDataCounter(DMA1_Channel3, program->buffer_size);
         DMA_Cmd(DMA1_Channel3, ENABLE);
     }
 
@@ -203,8 +204,9 @@ void USB_IRQHandler() {
 }
 
 void DMA1_Channel1_IRQHandler() {
+    uint8_t which = (DMA1->ISR & DMA1_IT_HT1) ? 0 : 1;
     DMA_ClearITPendingBit(DMA1_IT_TC1 | DMA1_IT_HT1);
-    dma_interrupt((DMA1->ISR & DMA1_IT_TC1) ? 0 : 1);
+    dma_interrupt(which);
     if(DMA1->ISR & (DMA1_IT_HT1 | DMA1_IT_TC1)) {
         hal_stream_overrun = 1;
         hal_stream_disable();
@@ -212,8 +214,9 @@ void DMA1_Channel1_IRQHandler() {
 }
 
 void DMA1_Channel2_3_IRQHandler() {
+    uint8_t which = (DMA1->ISR & DMA1_IT_HT3) ? 0 : 1;
     DMA_ClearITPendingBit(DMA1_IT_TC3 | DMA1_IT_HT3);
-    dma_interrupt((DMA1->ISR & DMA1_IT_TC3) ? 0 : 1);
+    dma_interrupt(which);
     if(DMA1->ISR & (DMA1_IT_HT3 | DMA1_IT_TC3)) {
         hal_stream_overrun = 1;
         hal_stream_disable();

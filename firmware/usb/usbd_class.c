@@ -80,6 +80,7 @@ static uint8_t setup_cb(void* pdev, USB_SETUP_REQ* req) {
 static uint8_t ctl_rx_cb(void *pdev) {
     switch(bRequest) {
         case REQUEST_LOAD_PROGRAM:
+            program_loaded();
             return USBD_OK;
         default:
             return USBD_FAIL;
